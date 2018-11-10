@@ -16,4 +16,5 @@ Note there is no reference implementation of MetaProd2Vec, and as so, there's no
 ## Project setup
 Run the `setup.sh` script provided to create the missing repo structure and download the necessary data.
 
-
+## Spotify Scrapper
+Yeah, ain't happenning. Check the [developer ToS](https://developer.spotify.com/terms/), section IV, article **1. General restrictions**, point _g_.
