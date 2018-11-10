@@ -9,6 +9,9 @@ Note there is no reference implementation of MetaProd2Vec, and as so, there's no
 [Unverified Spotify Playlists](https://github.com/bhavika/ListenMSD)  
 [Julián Bayardo's talk @ PyData 2018](https://slides.com/jbayardo/pydata-cordoba-2018/fullscreen#/1/2)  
 [Collab Notebook allegedly used in such talk](https://colab.research.google.com/drive/1wqqdtqpA7A0I4690xFiWiBP33KFYEzIa#scrollTo=VC8z23VU-PDM)  
+[CS Cornell Playlist Dataset](https://www.cs.cornell.edu/~shuochen/lme/data_page.html)
+[8Track Playlist Dataset](https://www.reddit.com/r/datasets/comments/9opsk9/dataset_22m_music_playlists_from_8tracks_165gb/)
+[30MusicDataset](http://recsys.deib.polimi.it/?page_id=54)
 
 ## Project setup
 Run the `setup.sh` script provided to create the missing repo structure and download the necessary data.
