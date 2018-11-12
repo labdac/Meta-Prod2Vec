@@ -12,6 +12,7 @@ Note there is no reference implementation of MetaProd2Vec, and as so, there's no
 [CS Cornell Playlist Dataset](https://www.cs.cornell.edu/~shuochen/lme/data_page.html)
 [8Track Playlist Dataset](https://www.reddit.com/r/datasets/comments/9opsk9/dataset_22m_music_playlists_from_8tracks_165gb/)
 [30MusicDataset](http://recsys.deib.polimi.it/?page_id=54)
+[idomaar data format](https://github.com/crowdrec/idomaar/wiki/DATA-FORMAT)
 
 ## Project setup
 Run the `setup.sh` script provided to create the missing repo structure and download the necessary data.
