@@ -22,13 +22,14 @@ class idomaarThingy():
         self.id = rId
         self.timestamp = rTimeStamp
         
-        if rProps is None:
+        if rProps is None or rProps == '':
             self.properties = None
         else:
             self.properties = SimpleNamespace()
             for key, value in rProps.items():
                 self._rsettr("properties", key, value)
-        if rLinked is None:
+                
+        if rLinked is None or rLinked == '':
             self.linked = None
         else:
             self.linked = SimpleNamespace()
@@ -70,11 +71,16 @@ class idomaarRelationship(idomaarThingy):
 class idomaarReader():
     def __init__(self, path):
         self.path = path
+        with open(self.path) as f:
+            self.total = sum(line != '' for line in f)
         
     @classmethod
     def _make_record(cls, line):
         t, i, ts, p, le = (line.split() + ["",] * 5)[:5]
-        ts = time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime(int(ts)))
+        try:
+            ts = time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime(int(ts)))
+        except:
+            ts = None
         if le: le = json.loads(urllib.parse.unquote(le))
         if p: p = json.loads(urllib.parse.unquote(p))
         return idomaarEntity(t, i, ts, p, le)
@@ -86,10 +92,17 @@ class idomaarReader():
     def __exit__(self, exc_type, exc_value, traceback):
         self._f.close()
     
+    def __len__(self):
+        return self.total
+    
     def __iter__(self):
         return self
         
     def __next__(self):
-        line = self._f.readline()
-        if line is None: raise StopIteration()
+        try:
+            line = next(self._f)
+            while line == '':
+                line = next(self._f)
+        except StopIteration:
+            raise StopIteration()
         return idomaarReader._make_record(line)

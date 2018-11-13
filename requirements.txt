@@ -1,0 +1,3 @@
+gensim
+progressbar2
+cython
