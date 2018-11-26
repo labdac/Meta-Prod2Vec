@@ -1,3 +1,4 @@
 gensim
 progressbar2
 cython
+pandas
