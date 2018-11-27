@@ -1,13 +1,21 @@
 import json
 import time
 import traceback as tb
-import urllib 
+import urllib.parse
 from types import SimpleNamespace
 import functools
+import logging
+import re
+
+logger = logging.getLogger(__name__)
+
+########## Helpers ##########
 
 # https://stackoverflow.com/a/31174427
 
 def rsetattr(obj, attr, val):
+    if type(val) == str:
+        val =  urllib.parse.unquote_plus(val)
     pre, _, post = attr.rpartition('.')
     return setattr(rgetattr(obj, pre) if pre else obj, post, val)
 
@@ -15,6 +23,8 @@ def rgetattr(obj, attr, *args):
     def _getattr(obj, attr):
         return getattr(obj, attr, *args)
     return functools.reduce(_getattr, [obj] + attr.split('.'))
+
+########## idomaar ##########
 
 class idomaarThingy():  
     def __init__(self, rType, rId, rTimeStamp, rProps, rLinked):
@@ -57,7 +67,7 @@ class idomaarThingy():
                 self._rsettr(prefix+'.'+val, key, value)
         else:
             if name == 'objects' and type(val) == list:
-                val = [idomaarThingy.from_dict(x) for x in val]
+                val = [idomaarThingy.from_dict(x) for x in val if type(x) == dict]
             rsetattr(self, '.'.join([prefix, name]), val)
 
 
@@ -69,22 +79,33 @@ class idomaarRelationship(idomaarThingy):
 
 
 class idomaarReader():
-    def __init__(self, path):
+    def __init__(self, path, tolerant=False):
         self.path = path
-        with open(self.path) as f:
+        self.tolerant = tolerant
+        # for having _len_ and being able to use progressbar
+        with open(self.path, 'rb') as f:
             self.total = sum(line != '' for line in f)
         
     @classmethod
-    def _make_record(cls, line):
-        t, i, ts, p, le = (line.split() + ["",] * 5)[:5]
+    def _make_record(cls, line, tolerant = False):
         try:
-            ts = time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime(int(ts)))
-        except:
-            ts = None
-        if le: le = json.loads(urllib.parse.unquote(le))
-        if p: p = json.loads(urllib.parse.unquote(p))
-        return idomaarEntity(t, i, ts, p, le)
-    
+            t, i, ts, p, le = (line.split('\t') + ["",] * 5)[:5]
+            try:
+                ts = time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime(int(ts)))
+            except:
+                ts = None
+            if le:
+                le = json.loads(le)
+            if p:
+                p = json.loads(p)
+            return idomaarEntity(t, i, ts, p, le)
+        except Exception as e:
+            logger.error(f"{e}\n Offending line: {line}")
+            if tolerant:
+                return None
+            else:
+                raise
+
     def __enter__(self):
         self._f = open(self.path, "r")
         return self
@@ -99,10 +120,13 @@ class idomaarReader():
         return self
         
     def __next__(self):
+        retval = None
         try:
-            line = next(self._f)
-            while line == '':
+            while retval is None:
                 line = next(self._f)
+                while line == '':
+                    line = next(self._f)
+                retval = idomaarReader._make_record(line, self.tolerant)
+            return retval
         except StopIteration:
             raise StopIteration()
-        return idomaarReader._make_record(line)
