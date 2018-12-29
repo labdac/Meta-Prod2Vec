@@ -97,6 +97,14 @@ class idomaarReader():
             if le:
                 le = json.loads(le)
             if p:
+                # Some title properties contain unescaped sequences,
+                # e.g. {"title": "this "is" unescaped"}
+                # or invalid escape sequences (e.g. Gothic\Rock
+                match = re.findall(
+                    pattern = '\"Title\"\:\"(.+)?\",\"numtracks\"',
+                    string = p)
+                p = p.replace(match[0], match[0].replace("\"", ""))
+                p = p.replace("\\", "/")
                 p = json.loads(p)
             return idomaarEntity(t, i, ts, p, le)
         except Exception as e:
