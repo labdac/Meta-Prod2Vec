@@ -54,6 +54,9 @@ class idomaarThingy():
     
     @classmethod
     def from_dict(cls, d):
+        # If we're loading a song, then check if we can add some metadata to it.
+        if d.get('type') == 'track' and idomaarReader.tracks_artists is not None:
+            d['artist_id'] = idomaarReader.tracks_artists[d.get('id')]
         return idomaarThingy(d.get('type'),
                             d.get('id'),
                             d.get('timestamp'),
@@ -79,13 +82,43 @@ class idomaarRelationship(idomaarThingy):
 
 
 class idomaarReader():
-    def __init__(self, path, tolerant=False):
+    tracks_artists = None
+    def __init__(self, path, tracks_file = None, tolerant=False):
         self.path = path
         self.tolerant = tolerant
+        self.tracks_file = tracks_file
+        self.use_metadata = self.tracks_file is not None
+        if self.use_metadata:
+            self.load_tracks_data()
         # for having _len_ and being able to use progressbar
         with open(self.path, 'rb') as f:
             self.total = sum(line != '' for line in f)
-        
+    def load_tracks_data(self):
+        # check if already loaded
+        if idomaarReader.tracks_artists is not None:
+            return
+        # Not all values in range 0-numlines are used, but it's pretty close.
+        # Also, using a vector uses 58% of the memory that a dict would use.
+        tracks_artists = [0] * 5675143
+        with open("../data/ThirtyMusic/entities/tracks.idomaar") as tracks_data:
+            line = tracks_data.readline()
+            i = 0
+            while line:
+                # we don't use album data because only ~38% of songs and ~48% of
+                # plays have album data.
+                objtype, track_id, track_len, track_data, metadata = line.split("\t")
+                metadata = json.loads(metadata)
+                artist_id = metadata["artists"][0]["id"]
+                tracks_artists[int(track_id)] = artist_id
+
+                line = tracks_data.readline()
+                if i%1000000 == 0:
+                    logger.info("Loading track data: {}%".format(i/5675143*100))
+                i+=1
+        logger.info("100%")
+        # Save it on static attribute
+        idomaarReader.tracks_artists = tracks_artists
+
     @classmethod
     def _make_record(cls, line, tolerant = False):
         try:
@@ -97,15 +130,26 @@ class idomaarReader():
             if le:
                 le = json.loads(le)
             if p:
-                # Some title properties contain unescaped sequences,
-                # e.g. {"title": "this "is" unescaped"}
-                # or invalid escape sequences (e.g. Gothic\Rock
-                match = re.findall(
-                    pattern = '\"Title\"\:\"(.+)?\",\"numtracks\"',
-                    string = p)
-                p = p.replace(match[0], match[0].replace("\"", ""))
-                p = p.replace("\\", "/")
+                if t == "playlist":
+                    # Some title properties contain unescaped sequences,
+                    # e.g. {"title": "this "is" unescaped"}
+                    # or invalid escape sequences (e.g. Gothic\Rock)
+                    match = re.findall(
+                        pattern = '\"Title\"\:\"(.+)?\",\"numtracks\"',
+                        string = p)
+                    p = p.replace(match[0], match[0].replace("\"", ""))
+                    p = p.replace("\\", "/")
+                elif t == "event.session":
+                    # Sometimes columns are not separated by tabs but
+                    # by one space only. This causes a json parser
+                    # error, so we fix it here.
+                    if "} {" in p:
+                        p, le = p.split("} {")
+                        p += "}"
+                        le = json.loads("{"+le)
                 p = json.loads(p)
+
+
             return idomaarEntity(t, i, ts, p, le)
         except Exception as e:
             logger.error(f"{e}\n Offending line: {line}")
